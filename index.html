@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mathpro - Hệ Thống Học & Thi (AI Powered)</title>
+    
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    
+    <!-- FIX: Cấu hình MathJax nâng cao -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            },
+            startup: {
+                ready: () => {
+                    console.log('MathJax is loaded.');
+                    MathJax.startup.defaultReady();
+                }
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root { --p: #2563eb; --bg: #f3f4f6; --txt: #1f2937; --success: #22c55e; --warning: #eab308; --danger: #ef4444; --ai: #8b5cf6; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); color: var(--txt); height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* AUTH & MODAL */
+        #auth-overlay, #info-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.98); z-index: 9999; display: flex; justify-content: center; align-items: center; }
+        #info-modal { background: rgba(0,0,0,0.8); z-index: 10000; display: none; }
+        .auth-card, .modal-card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 360px; text-align: center; border: 1px solid #ddd; max-width: 90%; }
+        .inp { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        .btn { padding: 12px 20px; background: var(--p); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; width: 100%; margin-top: 10px; }
+        .btn:hover { opacity: 0.9; } .btn:active { transform: scale(0.95); }
+        .google-btn { display: flex; align-items: center; justify-content: center; background: white; border: 1px solid #ccc; color: #333; margin-top: 15px; }
+        .g-icon { width: 18px; height: 18px; margin-right: 10px; }
+        .tab-grp { display: flex; margin-bottom: 20px; border-bottom: 1px solid #eee; }
+        .tab { flex: 1; padding: 10px; cursor: pointer; background: none; border: none; font-weight: bold; color: #666; }
+        .tab.active { color: var(--p); border-bottom: 3px solid var(--p); }
+        .f-view { display: none; } .f-view.active { display: block; }
+
+        /* HEADER & NAV */
+        header { background: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); z-index: 100; flex-shrink: 0; }
+        .nav-bar { display: flex; justify-content: center; gap: 10px; padding: 10px; background: #fff; border-bottom: 1px solid #eee; flex-shrink: 0; overflow-x: auto; white-space: nowrap; }
+        .nav-btn { padding: 8px 16px; border: none; background: #f0f0f0; border-radius: 20px; cursor: pointer; font-weight: 600; color: #666; width: auto; margin-top: 0; }
+        .nav-btn.active { background: var(--p); color: white; }
+
+        /* LAYOUT */
+        #main-app { display: none; flex-direction: column; height: 100%; }
+        .container { flex: 1; overflow-y: auto; padding: 20px; max-width: 1200px; margin: 0 auto; width: 100%; box-sizing: border-box; -webkit-overflow-scrolling: touch; }
+        
+        /* FIX 2: Bỏ height: 100% */
+        .section { display: none; width: 100%; } 
+        .section.active { display: block; }
+
+        /* PROFILE */
+        .profile-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .history-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .score-badge { padding: 4px 10px; border-radius: 12px; font-weight: bold; color: white; font-size: 0.9rem; }
+        .s-low { background: var(--danger); } .s-mid { background: var(--warning); } .s-high { background: var(--success); }
+
+        /* QUIZ & TOP 10 */
+        .quiz-layout { display: flex; gap: 20px; flex-wrap: wrap; width: 100%; }
+        .quiz-main { flex: 3; display: flex; flex-direction: column; min-width: 300px; }
+        .quiz-sidebar { flex: 1; background: white; border-radius: 12px; padding: 15px; border: 1px solid #eee; height: fit-content; min-width: 250px; }
+        
+        @media (max-width: 768px) {
+            .quiz-main { min-width: 100%; }
+            .quiz-sidebar { min-width: 100%; margin-top: 20px; }
+            .container { padding: 10px; }
+        }
+
+        .paper-header { background: #fff; border: 2px solid #000; padding: 15px; margin-bottom: 20px; font-family: 'Times New Roman', serif; display: flex; justify-content: space-between; align-items: flex-start; }
+        .paper-info div { margin-bottom: 5px; font-size: 1.1rem; }
+        
+        #timer-box { font-size: 1.5rem; font-weight: bold; color: #2563eb; border: 2px solid #2563eb; padding: 5px 15px; border-radius: 8px; display: inline-block; margin-bottom: 5px; min-width: 100px; text-align: center; }
+        .status-box { text-align: right; }
+
+        .top-list { list-style: none; padding: 0; margin: 0; }
+        .top-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #eee; font-size: 0.9rem; align-items: center; }
+        .top-rank { font-weight: bold; width: 25px; display: inline-block; }
+        .top-1 { color: #eab308; } .top-2 { color: #94a3b8; } .top-3 { color: #b45309; }
+        .top-time { font-size: 0.75rem; color: #666; margin-left: 5px; }
+
+        /* QUESTION CARD */
+        .q-card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); min-height: 300px; display: flex; flex-direction: column; justify-content: center; font-family: 'Times New Roman', serif; font-size: 1.15rem; line-height: 1.5; }
+        .part-label { font-family: 'Segoe UI', sans-serif; background: #dbeafe; color: #1e40af; padding: 5px 10px; border-radius: 4px; font-weight: bold; font-size: 0.9rem; display: inline-block; margin-bottom: 15px; }
+        .q-img { display: block; max-width: 100%; height: auto; max-height: 250px; margin: 15px auto; border: 1px solid #eee; border-radius: 8px; }
+        .opt-list { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
+        @media (max-width: 600px) { .opt-list { grid-template-columns: 1fr; } } 
+        
+        .opt-item { font-family: 'Segoe UI', sans-serif; font-size: 1rem; padding: 15px; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .opt-item:hover { background: #f9fafb; border-color: var(--p); }
+        .opt-item.selected { background: #eff6ff; border-color: var(--p); color: var(--p); font-weight: bold; }
+        .review-correct { background: #dcfce7 !important; border-color: #22c55e !important; color: #15803d !important; }
+        .review-wrong { background: #fee2e2 !important; border-color: #ef4444 !important; color: #b91c1c !important; }
+        .tf-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-family: 'Segoe UI', sans-serif; font-size: 1rem; }
+        .tf-table td { padding: 8px 0; border-bottom: 1px dashed #eee; }
+        .tf-btn { padding: 5px 15px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; margin-left: 5px; display: inline-block; margin-bottom: 5px; }
+        .tf-btn.selected { background: var(--p); color: white; border-color: var(--p); }
+        .short-inp { width: 100%; padding: 15px; font-size: 1.1rem; border: 2px solid #e5e7eb; border-radius: 8px; margin-top: 10px; box-sizing: border-box; }
+
+        /* FOOTER */
+        .footer-nav { background: white; padding: 15px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        #grid-panel { position: absolute; bottom: 70px; left: 0; right: 0; background: white; padding: 20px; border-top: 1px solid #ccc; display: none; box-shadow: 0 -5px 20px rgba(0,0,0,0.1); max-height: 60vh; overflow-y: auto; z-index: 50; }
+        .grid-sec-title { font-weight: bold; margin: 10px 0 5px 0; color: #666; font-size: 0.9rem; border-bottom: 1px solid #eee; padding-bottom: 5px; font-family: 'Segoe UI', sans-serif; }
+        .grid-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
+        .q-btn { width: 35px; height: 35px; border-radius: 50%; border: 1px solid #ddd; background: white; cursor: pointer; font-size: 13px; display: flex; justify-content: center; align-items: center; }
+        .q-btn.done { background: var(--success); color: white; border-color: var(--success); }
+        .q-btn.current { border: 2px solid var(--p); font-weight: bold; transform: scale(1.1); }
+
+        /* E-LEARNING & INFO */
+        .lecture-layout { display: flex; gap: 20px; flex-wrap: wrap; width: 100%; }
+        .lecture-list { flex: 1; min-width: 250px; background: white; border-radius: 8px; border: 1px solid #e5e7eb; overflow-y: auto; max-height: 500px; }
+        .lecture-item { padding: 12px 15px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; align-items: center; transition: 0.2s; }
+        .lecture-item.active { background: #eff6ff; color: var(--p); font-weight: bold; border-left: 4px solid var(--p); }
+        .lecture-viewer { flex: 3; min-width: 300px; background: #000; border-radius: 8px; overflow: hidden; min-height: 400px; position: relative; display: flex; flex-direction: column; } 
+        .lecture-iframe { width: 100%; flex: 1; border: none; min-height: 350px; }
+        
+        @media (max-width: 768px) {
+            .lecture-viewer { min-width: 100%; min-height: 300px; order: -1; margin-bottom: 10px; }
+            .lecture-list { min-width: 100%; max-height: 300px; }
+        }
+
+        .doc-section { margin-bottom: 20px; }
+        .doc-header { font-size: 1.2rem; font-weight: bold; border-bottom: 2px solid var(--p); padding-bottom: 8px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; color: var(--txt); }
+        .chapter-title { font-weight: bold; font-size: 1.1rem; color: #1e40af; margin: 15px 0 10px 0; background: #dbeafe; padding: 10px 15px; border-radius: 6px; border-left: 4px solid #1e40af; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+        .chapter-title:hover { background: #bfdbfe; }
+        .info-grid { display: none; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; padding: 10px 0; }
+        .info-grid.show { display: grid; }
+        .info-card { background: white; border: 1px solid #eee; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.3s; }
+        .info-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); border-color: var(--p); }
+        .info-img { width: 100%; height: 140px; object-fit: cover; }
+        .info-title { padding: 10px; font-weight: 600; font-size: 0.9rem; text-align: center; }
+        #lightbox { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; display: none; justify-content: center; align-items: center; flex-direction: column; }
+        #lightbox img { max-width: 90%; max-height: 80vh; border-radius: 4px; }
+        
+        /* CHAT & AI STYLES */
+        .chat-btn { position: fixed; bottom: 90px; right: 20px; width: 50px; height: 50px; background: var(--p); border-radius: 50%; color: white; display: flex; justify-content: center; align-items: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 900; }
+        .chat-box { position: fixed; bottom: 150px; right: 20px; width: 320px; height: 400px; background: white; border-radius: 12px; box-shadow: 0 5px 30px rgba(0,0,0,0.15); display: none; flex-direction: column; z-index: 900; border: 1px solid #eee; max-width: calc(100% - 40px); }
+        
+        /* NEW AI FEATURES STYLES */
+        .ai-btn { background: linear-gradient(135deg, #6366f1, #a855f7); border: none; color: white; margin-top: 15px; padding: 8px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; transition: transform 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.1); width: auto; }
+        .ai-btn:hover { transform: scale(1.05); opacity: 0.95; }
+        .ai-btn.secondary { background: linear-gradient(135deg, #f59e0b, #d97706); margin-left: 10px; }
+        .ai-box { background: #f5f3ff; border: 1px solid #ddd6fe; padding: 15px; border-radius: 8px; margin-top: 15px; display: none; font-size: 0.95rem; color: #4c1d95; line-height: 1.6; font-family: 'Segoe UI', sans-serif; }
+        .ai-loading { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.5); border-radius: 50%; border-top-color: white; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Markdown-like styling for AI response */
+        .ai-content strong { color: #6d28d9; }
+        .ai-content ul { padding-left: 20px; margin: 5px 0; }
+        .ai-content li { margin-bottom: 5px; }
+        
+        /* Practice Gen Q Style */
+        .practice-container { margin-top: 15px; border: 2px dashed #a855f7; padding: 15px; border-radius: 8px; background: #fff; }
+        .p-opt { padding: 10px; border: 1px solid #ddd; margin: 5px 0; border-radius: 4px; cursor: pointer; }
+        .p-opt:hover { background: #f0f9ff; }
+        .p-opt.correct { background: #dcfce7; border-color: #22c55e; }
+        .p-opt.wrong { background: #fee2e2; border-color: #ef4444; }
+    </style>
+</head>
+<body>
+
+    <div id="auth-overlay">
+        <div class="auth-card">
+            <h2 style="color:var(--p);margin-top:0">Mathpro</h2>
+            <div class="tab-grp">
+                <button class="tab active" onclick="switchTab('login')">Đăng Nhập</button>
+                <button class="tab" onclick="switchTab('reg')">Đăng Ký</button>
+            </div>
+            <div id="v-login" class="f-view active">
+                <input id="l-email" class="inp" placeholder="Email" value="hocsinh@mathpro.edu.vn">
+                <input id="l-pass" type="password" class="inp" placeholder="Mật khẩu" value="123456">
+                <button class="btn" onclick="doLogin()">Vào Lớp</button>
+            </div>
+            <div id="v-reg" class="f-view">
+                <input id="r-name" class="inp" placeholder="Họ tên">
+                <input id="r-email" class="inp" placeholder="Email">
+                <input id="r-pass" type="password" class="inp" placeholder="Mật khẩu">
+                <button class="btn" style="background:#16a34a" onclick="doRegister()">Tạo Tài Khoản</button>
+            </div>
+            <button class="btn google-btn" onclick="doGoogle()">
+                <svg class="g-icon" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg> Tiếp tục với Google
+            </button>
+        </div>
+    </div>
+
+    <div id="info-modal">
+        <div class="modal-card">
+            <h3 style="color:var(--p)">Cập Nhật Thông Tin</h3>
+            <p style="font-size:0.9rem; color:#666; margin-bottom:15px;">Vui lòng nhập tên và lớp để ghi nhận điểm thi.</p>
+            <input id="u-fullname" class="inp" placeholder="Họ và tên (VD: Nguyễn Văn A)">
+            <input id="u-class" class="inp" placeholder="Lớp (VD: 12A1)">
+            <button class="btn" onclick="saveUserInfo()">Lưu & Bắt Đầu</button>
+        </div>
+    </div>
+
+    <div id="main-app">
+        <header>
+            <strong style="font-size:1.3rem;color:var(--p)">Mathpro <span style="font-size:0.8rem;background:linear-gradient(to right, #6366f1, #a855f7);color:white;padding:2px 8px;border-radius:10px;">AI</span></strong>
+            <div>
+                <span id="u-name-display" style="font-weight:bold;margin-right:10px">Học sinh</span>
+                <button class="nav-btn" onclick="nav('profile')" style="background:#e0f2fe; color:var(--p); margin-right:5px">👤 Cá nhân</button>
+                <button class="nav-btn" style="background:#fee2e2;color:red" onclick="doLogout()">Thoát</button>
+            </div>
+        </header>
+
+        <div class="nav-bar">
+            <button class="nav-btn active" onclick="nav('lecture')">Bài Giảng</button>
+            <button class="nav-btn" onclick="nav('docs')">Tài Liệu</button>
+            <button class="nav-btn" onclick="nav('quiz')">Vào Thi</button>
+        </div>
+
+        <div class="container">
+            <div id="sec-lecture" class="section active">
+                <div class="card" style="height:auto; min-height:100%; box-sizing:border-box; display:flex; flex-direction:column; background:white; padding:15px; border-radius:12px;">
+                    <h3 style="margin-top:0; border-bottom:1px solid #eee; padding-bottom:10px;">📺 Kho Bài Giảng</h3>
+                    <div class="lecture-layout">
+                        <div class="lecture-list" id="lecture-list"></div>
+                        <div class="lecture-viewer">
+                            <iframe id="main-frame" class="lecture-iframe" src="" allowfullscreen></iframe>
+                            <div id="viewer-placeholder" class="lecture-placeholder" style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;justify-content:center;align-items:center;flex-direction:column;background:#f0f0f0;">
+                                <div style="font-size:3rem;">▶️</div><p>Chọn bài giảng để bắt đầu</p>
+                            </div>
+                            <!-- FEATURE AI 1: Lecture Summary -->
+                            <div style="padding:10px; background:white; border-top:1px solid #eee;">
+                                <button class="ai-btn" onclick="summarizeLecture()">✨ Tóm tắt kiến thức bài này</button>
+                                <div id="lecture-summary-box" class="ai-box"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="sec-docs" class="section">
+                <div class="profile-card">
+                    <h3 style="margin-top:0">📂 Kho PDF</h3>
+                    <div style="padding:10px; background:#eff6ff; border-left:4px solid var(--p); margin-bottom:10px; border-radius:4px;">
+                        <b>📄 Đề cương Ôn tập Chương 1.pdf</b><br><a href="#" style="color:var(--p);text-decoration:none;font-size:0.9rem;">⬇️ Tải xuống</a>
+                    </div>
+                    <div style="padding:10px; background:#fdf2f8; border-left:4px solid #db2777; border-radius:4px;">
+                        <b>📄 Bài tập tự luyện (Có đáp án).pdf</b><br><a href="#" style="color:#db2777;text-decoration:none;font-size:0.9rem;">⬇️ Tải xuống</a>
+                    </div>
+                </div>
+                
+                <div class="doc-section">
+                    <div class="doc-header">🖼️ Góc Infographic</div>
+                    <div class="chapter-title" onclick="toggleInfo('c1')">📚 Chương 1: Ứng dụng đạo hàm <span style="font-size:0.8em">▼</span></div>
+                    <div class="info-grid show" id="info-c1"></div>
+                    <div class="chapter-title" onclick="toggleInfo('c3')">📚 Chương 3: Thống kê <span style="font-size:0.8em">▼</span></div>
+                    <div class="info-grid" id="info-c3"></div>
+                </div>
+            </div>
+
+            <div id="sec-quiz" class="section">
+                <div class="quiz-layout">
+                    <div class="quiz-main">
+                        <div class="paper-header">
+                            <div class="paper-info">
+                                <div><b>Họ tên:</b> <span id="q-name">...</span></div>
+                                <div><b>Lớp:</b> <span id="q-class">...</span></div>
+                            </div>
+                            <div class="status-box">
+                                <div style="font-size:0.9rem; color:#666; margin-bottom:5px;">Thời gian làm bài</div>
+                                <div id="timer-box">00:00:00</div>
+                                <div style="color:red; font-weight:bold; font-size:0.9rem" id="exam-status">ĐANG LÀM BÀI</div>
+                            </div>
+                        </div>
+                        <div id="quiz-area" style="flex:1; display:flex; flex-direction:column; justify-content:center;"></div>
+                    </div>
+                    <div class="quiz-sidebar">
+                        <h4 style="margin-top:0; border-bottom:2px solid #eab308; padding-bottom:5px;">🏆 Bảng Vàng (Top 10)</h4>
+                        <div id="top-loading" style="display:none; color:#666; font-size:0.9rem; text-align:center;">Đang tải...</div>
+                        <ul class="top-list" id="top-list"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <div id="sec-profile" class="section">
+                <div class="profile-card">
+                    <h3>👤 Thông Tin Cá Nhân</h3>
+                    <p><b>Họ tên:</b> <span id="p-fullname">...</span></p>
+                    <p><b>Lớp:</b> <span id="p-class">...</span></p>
+                    <p><b>Email:</b> <span id="p-email">...</span></p>
+                    <!-- FEATURE AI 4: Profile Analysis -->
+                    <button class="ai-btn" onclick="analyzeProfile()">📊 Phân tích & Lời khuyên AI</button>
+                    <div id="profile-ai-box" class="ai-box" style="background:#f0fdf4; border-color:#bbf7d0; color:#166534"></div>
+                </div>
+                <div class="profile-card">
+                    <h3>🕒 Lịch Sử Làm Bài</h3>
+                    <div id="history-list"><p style="color:#666">Chưa có bài thi nào.</p></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="footer-nav" class="footer-nav" style="display:none">
+            <button class="nav-btn" onclick="moveQ(-1)">⬅️ Trước</button>
+            <button class="nav-btn" style="border:1px solid var(--p); background:white; color:var(--p)" onclick="toggleGrid()">🔢 Danh sách</button>
+            <button class="nav-btn" onclick="moveQ(1)">Sau ➡️</button>
+            <button class="nav-btn" style="background:var(--danger); color:white" onclick="submitExam()" id="submit-btn">NỘP BÀI</button>
+        </div>
+        
+        <div id="grid-panel">
+            <div class="grid-sec-title">PHẦN I (12 Câu)</div> <div class="grid-row" id="grid-p1"></div>
+            <div class="grid-sec-title">PHẦN II (2 Câu)</div> <div class="grid-row" id="grid-p2"></div>
+            <div class="grid-sec-title">PHẦN III (4 Câu)</div> <div class="grid-row" id="grid-p3"></div>
+        </div>
+    </div>
+
+    <div id="lightbox" onclick="this.style.display='none'">
+        <span style="color:white; font-size:40px; position:absolute; top:20px; right:30px; cursor:pointer">×</span>
+        <img id="lightbox-img" src="">
+        <div id="lightbox-caption" style="color:white; margin-top:15px; font-weight:bold"></div>
+    </div>
+
+    <div class="chat-btn" onclick="toggleChat()">💬</div>
+    <div class="chat-box" id="chat-box">
+        <div style="padding:10px;background:var(--p);color:white;font-weight:bold;display:flex;justify-content:space-between">
+            <span>Trợ lý AI</span>
+            <span style="font-size:0.8rem;opacity:0.8">Gemini 2.5 Flash</span>
+        </div>
+        <div style="flex:1;padding:10px;overflow-y:auto;background:#f9f9f9" id="chat-msgs"><div class="msg bot">Chào em! Thầy có thể giúp gì về môn Toán?</div></div>
+        <div style="padding:10px;border-top:1px solid #eee;display:flex"><input id="chat-inp" class="inp" style="margin:0;flex:1"><button class="nav-btn" style="margin-left:5px; background:var(--p); color:white" onclick="sendChat()">Gửi</button></div>
+    </div>
+
+    <script>
+        const CFG={apiKey:"AIzaSyC1RdQm6whSY6afs5ueEXYaBl6E31oIcS0",authDomain:"mathpro-db.firebaseapp.com",projectId:"mathpro-db"};
+        const apiKey = ""; 
+        
+        const SHEET="https://script.google.com/macros/s/AKfycbw91ovDMxBgT2yuBcoK0gc_bznQpwaUVyXowUD_C3kBJOWImpOTQJeEgcuVrBa32zfVmA/exec";
+        let auth, user, currentQ=0, answers={}, userData={name:"", class:""}, isReviewMode = false;
+        let currentLectureIndex = -1;
+        
+        let timerInterval;
+        let secondsElapsed = 0;
+        let QUESTIONS = []; 
+
+        const LECTURES = [
+            { id: 1, title: "Bài 1: Tính đơn điệu của hàm số", type: "elearning", url: "baigiang-bai1/index.html" },
+            { id: 2, title: "Bài 2: Cực trị hàm số và cách tìm", type: "elearning", url: "baigiang-bai2/index.html" },
+            { id: 3, title: "Bài 3: Giá trị lớn nhất - Giá trị nhỏ nhất (GTLN-GTNN)", type: "elearning", url: "baigiang-bai3/index.html" }
+        ];
+        
+        const INFO_DATA = {
+            c1: [
+                { title: "Sơ đồ: Tính đơn điệu", src: "CHƯƠNG 1/unnamed.jpg" }, 
+                { title: "Sơ đồ: Cực trị hàm số", src: "CHƯƠNG 1/GTLN - GTNN của hàm số.png" },
+                { title: "Sơ đồ: GTLN - GTNN", src: "CHƯƠNG 1/Đường Tiệm cận của Đồ thị hàm số.png" }, 
+                { title: "Sơ đồ: Tiệm cận", src: "CHƯƠNG 1/Khảo sát hàm số.png" }
+            ],
+            c3: [
+                { title: "Sơ đồ: Khoảng Biến thiên và Khoảng tứ phân vị", src: "CHƯƠNG 3/Khoảng Biến thiên và Khoảng tứ phân vị.png" }, 
+                { title: "Sơ đồ: Phân bố tần số ghép lớp", src: "CHƯƠNG 3/Phân bố tần số ghép lớp.jpg" },
+                { title: "Sơ đồ: Thống Kê 12 _ tổng hợp", src: "CHƯƠNG 3/Thống Kê 12 _ tổng hợp.png" }
+            ]
+        };
+
+        const MASTER_DATA = [
+            {type:1, id:1, q:`Cho tứ diện ABCD, gọi I, J lần lượt là trung điểm của AB và CD. Đẳng thức nào sau đây sai? <img src="img/c1.png" class="q-img" onerror="this.style.display='none'">`, opts:["A. \\(\\vec{IJ}=\\frac{1}{2}(\\vec{AC}+\\vec{BD})\\)", "B. \\(\\vec{IJ}=\\frac{1}{2}(\\vec{DC}+\\vec{AD}+\\vec{BD})\\)", "C. \\(\\vec{IJ}=\\frac{1}{2}(\\vec{AD}+\\vec{BC})\\)", "D. \\(\\vec{IJ}=\\frac{1}{2}(\\vec{AC}+\\vec{BD})\\)"], a:"B"},
+            {type:1, id:2, q:`Hàm số có đồ thị như hình vẽ sau đồng biến trên khoảng nào dưới đây? <img src="img/c2.png" class="q-img" onerror="this.style.display='none'">`, opts:["A. (-3; 1)", "B. (-1; 1)", "C. (1; +∞)", "D. (-1; +∞)"], a:"B"},
+            {type:1, id:3, q:"Cho hàm số \\(y=\\frac{x-1}{x+1}\\). Khẳng định nào sau đây đúng?", opts:["A. Đồng biến trên R\\{-1}", "B. Nghịch biến trên R\\{-1}", "C. Đồng biến (-∞;-1)U(-1;+∞)", "D. Đồng biến từng khoảng"], a:"D"},
+            {type:1, id:4, q:"Hàm số \\(y=\\ln(4-x^2)\\) đồng biến trên khoảng?", opts:["A. (-2; 2)", "B. (-2; 0)", "C. (0; 2)", "D. (-∞; 2)"], a:"B"},
+            {type:1, id:5, q:`Cho hàm số y=f(x) có bảng biến thiên. Mệnh đề nào sai? <img src="img/c5.png" class="q-img" onerror="this.style.display='none'">`, opts:["A. Nghịch biến (-∞; 2)", "B. Đồng biến (2; +∞)", "C. Đồng biến (2; 5)", "D. Nghịch biến (0; 2)"], a:"A"},
+            {type:1, id:6, q:`Cho hình hộp ABCD.A'B'C'D'. Tính tổng \\(\\vec{AB}+\\vec{AD}+\\vec{A'C'}\\) <img src="img/c6.png" class="q-img" onerror="this.style.display='none'">`, opts:["A. \\(2\\vec{AA'}\\)", "B. \\(2\\vec{AC}\\)", "C. \\(2\\vec{C'A'}\\)", "D. \\(\\vec{0}\\)"], a:"B"},
+            {type:1, id:7, q:"Cho hình lập phương ABCD.A'B'C'D'. Khẳng định nào sai?", opts:["A. (AB,A'D')=90", "B. (AB,A'C')=45", "C. (AC,B'D')=90", "D. (A'A,CB')=45"], a:"D"},
+            {type:1, id:8, q:"Cho hàm số y=f(x) liên tục trên R có đạo hàm \\(f'(x)=x(1-x)^2(x-2)^3\\). Nghịch biến trên?", opts:["A. (0; 2)", "B. (-∞; 0)", "C. (1; +∞)", "D. (-1; 1)"], a:"A"},
+            {type:1, id:9, q:"Tìm khoảng nghịch biến của hàm số biết \\(f'(x)=3x(x-1)^2(x+2)^3\\).", opts:["A. (-2;0) và (1;+∞)", "B. (-∞;-2) và (0;1)", "C. (-∞;-2) và (0;+∞)", "D. (-2; 0)"], a:"D"},
+            {type:1, id:10, q:"Giả sử lượng hàng bán ra x theo giá p là \\(x=\\frac{250-p}{0.01p}\\). Khẳng định đúng?", opts:["A. Tăng khi giá tăng", "B. Giảm khi giá giảm", "C. Ko đổi", "D. Giảm khi giá tăng"], a:"D"},
+            {type:1, id:11, q:`Vận tốc chất điểm tăng khi t thuộc khoảng nào? <img src="img/c11.png" class="q-img" onerror="this.style.display='none'">`, opts:["A. (-3; +∞)", "B. (0; 2)", "C. (2; +∞)", "D. (0; +∞)"], a:"C"},
+            {type:1, id:12, q:`Hàm số đồng biến trên khoảng nào? <img src="img/c12.png" class="q-img" onerror="this.style.display='none'">`, opts:["A. (0; 1)", "B. (-∞; 4)", "C. (-1; 0)", "D. (1; +∞)"], a:"A"},
+            {type:2, id:13, q:"Trong không gian, cho hai vectơ a và b cùng có độ dài bằng 1, góc 45 độ.", subs:["a) \\(\\vec{a}.\\vec{b}=\\frac{\\sqrt{2}}{2}\\).", "b) \\(|\\vec{a}+\\vec{b}|=2+\\sqrt{2}\\).", "c) \\((\\vec{a}+3\\vec{b}).(\\vec{a}-2\\vec{b})=-5+\\frac{\\sqrt{2}}{2}\\).", "d) \\(|\\vec{a}-\\sqrt{2}\\vec{b}|=0\\)."], ans:["S","S","Đ","Đ"]},
+            {type:2, id:14, q:"Xét hàm số \\(y=\\frac{1}{3}x^3+(m+1)x^2+(m^2+2m)x-3\\) m là tham số.", subs:["a) Hàm số nghịch biến trên \\(\\mathbb{R}\\) với mọi giá trị của m.", "b) Hàm số nghịch biến trên khoảng (-1; 1) khi và chỉ khi \\(m \\ge -1\\).", "c) Không tồn tại giá trị m để hàm số đồng biến trên \\(\\mathbb{R}\\).", "d) Tập xác định của hàm số là \\(D=\\mathbb{R}\\setminus\\{3\\}\\)."], ans:["S","S","Đ","S"]},
+            {type:3, id:15, q:`Hằng ngày mực nước của một con kênh lên xuống theo thủy triều. Độ sâu h (m) của mực nước trong kênh tại thời điểm \\(t(h)(0\\le t\\le24)\\) trong ngày được xác định bởi công thức \\(h=2\\cos(\\frac{\\pi t}{12}+\\frac{\\pi}{3})+5\\). Gọi (a;b) là khoảng thời gian trong ngày mà độ sâu của mực nước trong kênh tăng dần. Tính giá trị của \\(a+b\\).`, a:"28"},
+            {type:3, id:16, q:`Người ta vận chuyển một thùng hàng có dạng hình hộp chữ nhật bằng cách móc 4 dây cáp vào 4 góc trên của thùng hàng và đầu còn lại móc vào cần cẩu như hình vẽ. <img src="img/p3c2.png" class="q-img" onerror="this.style.display='none'"> Biết rằng các đoạn dây cáp có độ dài bằng nhau và góc tạo bởi hai đoạn dây cáp đối diện nhau là \\(60^{\\circ}\\). Chiếc cần cẩu kéo thùng hàng lên theo phương thẳng đứng. Biết rằng \\(F_{1}, F_{2}, F_{3}, F_{4}\\) chịu được tối đa lực căng là 5 000 N. Hỏi cần cẩu nâng được thùng hàng có khối lượng (đơn vị kg) tối đa là bao nhiêu (làm tròn đến hàng đơn vị)? Lấy \\(g=10~m/s^{2}\\).`, a:"1732"},
+            {type:3, id:17, q:`Cho hàm số \\(f(x)=x^{2}-2x\\). Đặt \\(g(x)=f(f(x))+1\\). Giả sử hàm số \\(y=g(x)\\) đồng biến trên khoảng (a;b) với \\(a\\in\\mathbb{R}, b\\in\\mathbb{R}\\). Tính \\(a+b\\sqrt{2}\\).`, a:"1"},
+            {type:3, id:18, q:`Thể tích \\(V(cm^{3})\\) của 1kg nước tại nhiệt độ \\(T(0^{\\circ}C\\le T\\le30^{\\circ}C)\\) được tính bởi công thức \\(V(T)=999,87-0,06426T+0,0058043T^{2}-0,0000679T^{3}.\\) Thể tích nước \\(V(T)(0^{\\circ}C\\le T\\le30^{\\circ}C)\\) giảm trong khoảng nhiệt độ \\((a^{\\circ};b^{\\circ});\\) b làm tròn đến hàng đơn vị. Tổng \\(a+b\\) bằng bao nhiêu?`, a:"4"}
+        ];
+
+        // MOCK AUTH
+        function doLogin(){ 
+            const e = document.getElementById('l-email').value;
+            user = { uid: 'demo_user_123', email: e };
+            handleAuthSuccess(user);
+        }
+        function doRegister(){
+            const e = document.getElementById('r-email').value;
+            user = { uid: 'demo_user_new', email: e };
+            handleAuthSuccess(user);
+        }
+        function doGoogle(){
+            user = { uid: 'demo_user_google', email: 'demo@gmail.com' };
+            handleAuthSuccess(user);
+        }
+        function doLogout(){
+            localStorage.removeItem('isLoggedIn');
+            location.reload(); 
+        }
+
+        function handleAuthSuccess(u) {
+            localStorage.setItem('isLoggedIn', 'true');
+            user = u;
+            document.getElementById('p-email').innerText = u.email;
+            checkUserInfo(u);
+            initLectures(); initInfographics();
+        }
+
+        function switchTab(t){
+            document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+            document.querySelectorAll('.f-view').forEach(f=>f.classList.remove('active'));
+            if(t==='login'){document.querySelectorAll('.tab')[0].classList.add('active');document.getElementById('v-login').classList.add('active')}
+            else{document.querySelectorAll('.tab')[1].classList.add('active');document.getElementById('v-reg').classList.add('active')}
+        }
+
+        function checkUserInfo(u) {
+            const stored = localStorage.getItem('user_'+u.uid);
+            if(stored) {
+                userData = JSON.parse(stored);
+                updateProfileUI();
+                document.getElementById('auth-overlay').style.display='none';
+                document.getElementById('main-app').style.display='flex';
+                loadHistory();
+            } else {
+                document.getElementById('auth-overlay').style.display='none';
+                document.getElementById('info-modal').style.display='flex';
+            }
+        }
+
+        function standardizeName(str) {
+            return str.replace(/\s+/g, ' ').trim().toLowerCase().replace(/(^|\s)\S/g, l => l.toUpperCase());
+        }
+
+        function saveUserInfo() {
+            let name = document.getElementById('u-fullname').value;
+            let cls = document.getElementById('u-class').value;
+            if(!name || !cls) { alert("Vui lòng điền đủ Họ tên và Lớp!"); return; }
+            name = standardizeName(name); cls = cls.trim().toUpperCase(); 
+            userData = { name: name, class: cls };
+            localStorage.setItem('user_'+user.uid, JSON.stringify(userData));
+            document.getElementById('info-modal').style.display='none';
+            document.getElementById('main-app').style.display='flex';
+            updateProfileUI(); loadHistory();
+        }
+
+        function updateProfileUI() {
+            document.getElementById('u-name-display').innerText = userData.name;
+            document.getElementById('p-fullname').innerText = userData.name;
+            document.getElementById('p-class').innerText = userData.class;
+            document.getElementById('q-name').innerText = userData.name;
+            document.getElementById('q-class').innerText = userData.class;
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval); secondsElapsed = 0; updateTimerDisplay();
+            timerInterval = setInterval(() => { secondsElapsed++; updateTimerDisplay(); }, 1000);
+        }
+        function stopTimer() { clearInterval(timerInterval); }
+        function updateTimerDisplay() {
+            const h = Math.floor(secondsElapsed / 3600).toString().padStart(2, '0');
+            const m = Math.floor((secondsElapsed % 3600) / 60).toString().padStart(2, '0');
+            const s = (secondsElapsed % 60).toString().padStart(2, '0');
+            document.getElementById('timer-box').innerText = `${h}:${m}:${s}`;
+        }
+        function getDurationText() {
+            const h = Math.floor(secondsElapsed / 3600).toString().padStart(2, '0');
+            const m = Math.floor((secondsElapsed % 3600) / 60).toString().padStart(2, '0');
+            const s = (secondsElapsed % 60).toString().padStart(2, '0');
+            return `${h}h ${m}p ${s}s`; 
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function nav(id){
+            document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+            document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+            const qs = document.getElementById('sec-quiz');
+            if(id === 'quiz') {
+                isReviewMode = false; 
+                answers = {};
+                
+                let p1 = MASTER_DATA.filter(q => q.type === 1).slice(); 
+                let p2 = MASTER_DATA.filter(q => q.type === 2).slice();
+                let p3 = MASTER_DATA.filter(q => q.type === 3).slice();
+                
+                shuffleArray(p1); shuffleArray(p2); shuffleArray(p3);
+                QUESTIONS = [...p1, ...p2, ...p3];
+                
+                document.getElementById('exam-status').innerText = "ĐANG LÀM BÀI";
+                document.getElementById('exam-status').style.color = "red";
+                document.getElementById('submit-btn').style.display = "block";
+                qs.classList.add('active'); qs.style.display='flex';
+                document.getElementById('footer-nav').style.display='flex';
+                
+                currentQ = 0; startTimer(); renderQ(); fetchTop10();
+            } else {
+                stopTimer();
+                qs.classList.remove('active'); qs.style.display='none';
+                document.getElementById('sec-'+id).classList.add('active');
+                document.getElementById('footer-nav').style.display='none';
+            }
+            const map = {'lecture':0, 'docs':1, 'quiz':2};
+            if(map[id]!==undefined) document.querySelectorAll('.nav-bar .nav-btn')[map[id]].classList.add('active');
+        }
+
+        function fetchTop10() {
+            document.getElementById('top-loading').style.display = 'block';
+            document.getElementById('top-list').innerHTML = '';
+            fetch(SHEET).then(res => res.json()).then(data => {
+                document.getElementById('top-loading').style.display = 'none';
+                let html = '';
+                data.forEach((s, i) => {
+                    let rank = i===0?'top-1':(i===1?'top-2':(i===2?'top-3':''));
+                    let icon = i===0?'🥇':(i===1?'🥈':(i===2?'🥉':`#${i+1}`));
+                    html += `<li class="top-item"><div style="flex:1"><span class="top-rank ${rank}">${icon}</span> ${s.name} (${s.class})</div><div style="text-align:right"><span style="font-weight:bold;color:var(--p)">${s.score}</span><div class="top-time">${s.timeStr}</div></div></li>`;
+                });
+                document.getElementById('top-list').innerHTML = html;
+            }).catch(err => { document.getElementById('top-loading').innerText = 'Chưa có dữ liệu'; });
+        }
+
+        function initLectures() {
+            const list = document.getElementById('lecture-list'); if(!list) return;
+            list.innerHTML = LECTURES.map((lec,i) => `<div class="lecture-item" onclick="playLecture(${i})" id="lec-btn-${i}"><span>📺</span> ${lec.title}</div>`).join('');
+        }
+        function playLecture(i) {
+            currentLectureIndex = i;
+            document.querySelectorAll('.lecture-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`lec-btn-${i}`).classList.add('active');
+            document.getElementById('viewer-placeholder').style.display = 'none';
+            document.getElementById('main-frame').style.display = 'block';
+            document.getElementById('main-frame').src = LECTURES[i].url;
+            // Reset AI box
+            document.getElementById('lecture-summary-box').style.display = 'none';
+            document.getElementById('lecture-summary-box').innerHTML = '';
+        }
+
+        // --- FEATURE AI: Tóm tắt bài giảng ---
+        async function summarizeLecture() {
+            if(currentLectureIndex === -1) { alert("Vui lòng chọn bài giảng trước!"); return; }
+            const box = document.getElementById('lecture-summary-box');
+            box.style.display = 'block';
+            box.innerHTML = `<span class="ai-loading"></span> Đang tóm tắt bài giảng...`;
+            
+            const title = LECTURES[currentLectureIndex].title;
+            const prompt = `Tóm tắt ngắn gọn các kiến thức toán học cốt lõi, công thức quan trọng cần nhớ cho bài học: "${title}". Định dạng câu trả lời rõ ràng, dùng gạch đầu dòng.`;
+
+            try {
+                const response = await callGemini(prompt);
+                // Simple formatting
+                const formatted = response.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*/g, '•');
+                box.innerHTML = `<div class="ai-content"><strong>💡 Tóm tắt kiến thức:</strong><br>${formatted}</div>`;
+                renderMath(box);
+            } catch (e) {
+                box.innerHTML = `<span style="color:red">Lỗi AI: ${e.message}</span>`;
+            }
+        }
+        
+        // --- FEATURE AI: Cố vấn Học tập ---
+        async function analyzeProfile() {
+            const box = document.getElementById('profile-ai-box');
+            let history = JSON.parse(localStorage.getItem('his_'+user.uid) || "[]");
+            
+            if(history.length === 0) { alert("Bạn cần làm ít nhất 1 bài thi để AI phân tích!"); return; }
+            if(box.style.display === 'block') { box.style.display='none'; return; }
+            
+            box.style.display = 'block';
+            box.innerHTML = `<span class="ai-loading"></span> Đang phân tích hồ sơ học tập...`;
+            
+            // Prepare data for AI
+            const scores = history.slice(-5).map(h => h.score); // Last 5 scores
+            const prompt = `Tôi là một học sinh lớp 12. Đây là điểm số 5 bài kiểm tra Toán gần nhất của tôi: ${scores.join(', ')}. Hãy đóng vai một giáo viên cố vấn, nhận xét ngắn gọn về tình hình học tập của tôi và đưa ra 3 lời khuyên cụ thể để cải thiện. Giọng văn khích lệ, thân thiện.`;
+
+            try {
+                const response = await callGemini(prompt);
+                const formatted = response.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+                box.innerHTML = `<div class="ai-content"><strong>📊 Đánh giá từ AI:</strong><br>${formatted}</div>`;
+            } catch (e) {
+                box.innerHTML = `<span style="color:red">Lỗi AI: ${e.message}</span>`;
+            }
+        }
+
+        function initInfographics() {
+            ['c1', 'c3'].forEach(id => {
+                const list = document.getElementById('info-'+id); if(!list) return;
+                list.innerHTML = INFO_DATA[id].map(inf => 
+                    `<div class="info-card" onclick="openLightbox('${inf.src}', '${inf.title}')"><span style="position:absolute;top:5px;right:5px;background:rgba(0,0,0,0.6);color:white;padding:2px 5px;border-radius:4px;font-size:0.8rem">Xem</span><img src="${inf.src}" class="info-img" onerror="this.src='https://via.placeholder.com/300x160?text=Chưa+có+ảnh'"><div class="info-title">${inf.title}</div></div>`
+                ).join('');
+            });
+        }
+        function toggleInfo(id) { document.getElementById('info-'+id).classList.toggle('show'); }
+        function openLightbox(s,t) { document.getElementById('lightbox-img').src=s; document.getElementById('lightbox-caption').innerText=t; document.getElementById('lightbox').style.display='flex'; }
+
+        // --- MATH RENDER HELPER (FIX CRASH) ---
+        function renderMath(el) {
+            // Check if MathJax is loaded and the function exists
+            if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+                // If el provided, process it. Otherwise process the whole document (null)
+                // Passing [] is wrong if el is undefined.
+                MathJax.typesetPromise(el ? [el] : null).catch(e => console.log("Retrying MathJax...", e));
+            } else {
+                console.log("MathJax not ready yet.");
+            }
+        }
+
+        function renderQ() {
+            const q = QUESTIONS[currentQ];
+            let html = `<div class="q-card"><div><span class="part-label">Phần ${q.type} - Câu ${currentQ + 1}</span></div><div class="q-content">${q.q}</div>`;
+            if(q.type===1) {
+                html+=`<div class="opt-list">`+q.opts.map(o=>{
+                    let val = o.charAt(0);
+                    let cls = isReviewMode ? (answers[q.id]===val ? (val===q.a ? 'review-correct' : 'review-wrong') : (val===q.a ? 'review-correct' : '')) : (answers[q.id]===val ? 'selected' : '');
+                    return `<div class="opt-item ${cls}" onclick="${isReviewMode?'':'saveAns('+q.id+',\''+val+'\')'}">${o}</div>`;
+                }).join('')+`</div>`;
+            } else if(q.type===2) {
+                html+=`<table class="tf-table">`+q.subs.map((s,i)=>{
+                    let k = q.id+'_'+i;
+                    let uAns = answers[k]; let rAns = q.ans[i];
+                    let dCls = isReviewMode ? (uAns==='Đ'?(rAns==='Đ'?'review-correct':'review-wrong'):(rAns==='Đ'?'review-correct':'')) : (uAns==='Đ'?'selected':'');
+                    let sCls = isReviewMode ? (uAns==='S'?(rAns==='S'?'review-correct':'review-wrong'):(rAns==='S'?'review-correct':'')) : (uAns==='S'?'selected':'');
+                    return `<tr><td>${s}</td><td style="white-space:nowrap"><span class="tf-btn ${dCls}" onclick="${isReviewMode?'':'saveAns(\''+k+'\',\'Đ\')'}">Đúng</span><span class="tf-btn ${sCls}" onclick="${isReviewMode?'':'saveAns(\''+k+'\',\'S\')'}">Sai</span></td></tr>`;
+                }).join('')+`</table>`;
+            } else {
+                let uVal = answers[q.id]||'';
+                let style = isReviewMode ? (uVal.trim()===q.a ? 'border-color:#22c55e;color:#15803d' : 'border-color:#ef4444;color:#b91c1c') : '';
+                html+=`<input class="short-inp" value="${uVal}" style="${style}" oninput="saveAns(${q.id},this.value)" ${isReviewMode?'readonly':''} placeholder="Nhập đáp án...">`;
+            }
+            
+            // FEATURE AI 2 & 3: Explain & Similar Question in Review Mode
+            if(isReviewMode) {
+                html += `<div style="margin-top:10px">
+                            <button class="ai-btn" onclick="explainQuestion(${currentQ})">✨ Giải thích chi tiết</button>
+                            ${q.type === 1 ? `<button class="ai-btn secondary" onclick="generatePractice(${currentQ})">🎯 Thử sức câu tương tự</button>` : ''}
+                         </div>
+                         <div id="ai-q-box-${currentQ}" class="ai-box"></div>
+                         <div id="ai-practice-box-${currentQ}" class="ai-box" style="background:#fff7ed; border-color:#fed7aa"></div>`;
+            }
+
+            html+=`</div>`;
+            const area = document.getElementById('quiz-area');
+            area.innerHTML = html;
+            renderMath(area); // Pass the container explicitly
+            updateGrid();
+        }
+
+        // --- AI FEATURE: Explain Question Logic ---
+        async function explainQuestion(idx) {
+            const q = QUESTIONS[idx];
+            const box = document.getElementById(`ai-q-box-${idx}`);
+            // Hide practice box if open
+            const pBox = document.getElementById(`ai-practice-box-${idx}`);
+            if(pBox) pBox.style.display = 'none';
+
+            if(box.style.display === 'block') { box.style.display='none'; return; }
+            
+            box.style.display = 'block';
+            box.innerHTML = `<span class="ai-loading"></span> Đang phân tích câu hỏi...`;
+            
+            let qText = q.q.replace(/<[^>]*>?/gm, ''); 
+            let options = q.type === 1 ? q.opts.join(', ') : (q.type===2 ? q.subs.join('; ') : 'Tự luận');
+            let prompt = `Giải thích chi tiết cách giải cho câu hỏi toán học sau dành cho học sinh cấp 3. \nCâu hỏi: ${qText}\nLựa chọn: ${options}\nĐáp án đúng là: ${q.a} (hoặc đáp án đúng trong các ý con). \nHãy giải thích logic từng bước ngắn gọn dễ hiểu. Quan trọng: Dùng dấu $ kẹp công thức Toán (ví dụ: $x^2$) để hiển thị đẹp.`;
+
+            try {
+                const response = await callGemini(prompt);
+                const formatted = response.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+                box.innerHTML = `<div class="ai-content"><strong>💡 Phân tích của AI:</strong><br>${formatted}</div>`;
+                renderMath(box);
+            } catch(e) {
+                box.innerHTML = `<span style="color:red">Lỗi kết nối AI: ${e.message}</span>`;
+            }
+        }
+
+        // --- AI FEATURE: Generate Similar Question ---
+        async function generatePractice(idx) {
+            const q = QUESTIONS[idx];
+            const box = document.getElementById(`ai-practice-box-${idx}`);
+            // Hide explain box if open
+            const eBox = document.getElementById(`ai-q-box-${idx}`);
+            if(eBox) eBox.style.display = 'none';
+
+            if(box.style.display === 'block') { box.style.display='none'; return; }
+            
+            box.style.display = 'block';
+            box.innerHTML = `<span class="ai-loading"></span> Đang tạo câu hỏi mới...`;
+
+            let qText = q.q.replace(/<[^>]*>?/gm, '');
+            // Strict JSON prompt
+            let prompt = `Dựa trên dạng toán này: "${qText}", hãy tạo một câu hỏi trắc nghiệm Toán MỚI (khác số liệu) bằng tiếng Việt. 
+            Trả về CHÍNH XÁC định dạng JSON này (không thêm text nào khác): 
+            { "question": "Nội dung câu hỏi (Quan trọng: dùng dấu $ kẹp công thức, ví dụ $x^2$)", "options": ["A. ...", "B. ...", "C. ...", "D. ..."], "correctIndex": 0 } 
+            (correctIndex là 0 cho A, 1 cho B, v.v)`;
+
+            try {
+                const text = await callGemini(prompt);
+                // Clean markdown code blocks if any
+                const jsonStr = text.replace(/```json|```/g, '').trim();
+                const data = JSON.parse(jsonStr);
+                
+                let html = `<div class="practice-container">
+                    <div style="font-weight:bold;margin-bottom:10px;color:#d97706">🎯 Câu hỏi luyện tập AI:</div>
+                    <div style="margin-bottom:10px">${data.question}</div>
+                    <div>`;
+                
+                data.options.forEach((opt, i) => {
+                    html += `<div class="p-opt" onclick="checkPractice(this, ${i}, ${data.correctIndex})">${opt}</div>`;
+                });
+                
+                html += `</div></div>`;
+                box.innerHTML = html;
+                renderMath(box);
+            } catch(e) {
+                box.innerHTML = `<span style="color:red">Không thể tạo câu hỏi lúc này. Thử lại sau nhé! (${e.message})</span>`;
+            }
+        }
+
+        function checkPractice(el, idx, correct) {
+            const parent = el.parentElement;
+            // Disable clicks
+            parent.querySelectorAll('.p-opt').forEach(d => d.onclick = null);
+            
+            if(idx === correct) {
+                el.classList.add('correct');
+                el.innerHTML += " ✅ Chính xác!";
+            } else {
+                el.classList.add('wrong');
+                parent.children[correct].classList.add('correct');
+            }
+        }
+
+        function saveAns(k,v){if(!isReviewMode){answers[k]=v;renderQ();}}
+        function moveQ(d){const n=currentQ+d;if(n>=0&&n<QUESTIONS.length){currentQ=n;renderQ();}}
+        function toggleGrid(){const p=document.getElementById('grid-panel');p.style.display=p.style.display==='block'?'none':'block';}
+        function updateGrid(){
+            const p1=QUESTIONS.map((q,i)=>renderBtn(q,i)).filter((_,i)=>QUESTIONS[i].type===1).join('');
+            const p2=QUESTIONS.map((q,i)=>renderBtn(q,i)).filter((_,i)=>QUESTIONS[i].type===2).join('');
+            const p3=QUESTIONS.map((q,i)=>renderBtn(q,i)).filter((_,i)=>QUESTIONS[i].type===3).join('');
+            document.getElementById('grid-p1').innerHTML=p1;
+            document.getElementById('grid-p2').innerHTML=p2;
+            document.getElementById('grid-p3').innerHTML=p3;
+        }
+        function renderBtn(q,i){
+            let done=false;
+            if(q.type===1 && answers[q.id]) done=true;
+            if(q.type===3 && answers[q.id]) done=true;
+            if(q.type===2) for(let k=0;k<4;k++) if(answers[q.id+'_'+k]) done=true;
+            return `<button class="q-btn ${done?'done':''} ${i===currentQ?'current':''}" onclick="currentQ=${i};renderQ();toggleGrid()">${i+1}</button>`;
+        }
+
+        function submitExam() {
+            if(isReviewMode) return;
+            stopTimer();
+            const timeString = getDurationText(); 
+
+            let s1=0, s2=0, s3=0;
+            QUESTIONS.filter(q=>q.type===1).forEach(q=>{if(answers[q.id]===q.a) s1+=0.25});
+            QUESTIONS.filter(q=>q.type===2).forEach(q=>{let c=0; q.ans.forEach((a,i)=>{if(answers[q.id+'_'+i]===a) c++}); s2+=[0,0.1,0.25,1.0,1.5][c]});
+            QUESTIONS.filter(q=>q.type===3).forEach(q=>{if(answers[q.id]?.trim()===q.a) s3+=1.0});
+            
+            const total = (s1+s2+s3).toFixed(2);
+            let msg = ""; let t = parseFloat(total);
+            if(t < 5) msg = "Hãy cố gắng làm lại đừng nản để kết quả cao hơn!";
+            else if(t < 7) msg = "Hãy cố gắng làm lại để đạt kết quả cao hơn!";
+            else if(t < 9) msg = "Bạn sắp về đích rồi chỉ cần cố thêm chút nữa!";
+            else msg = "Bạn hoàn thành tốt lắm!";
+
+            alert(`KẾT QUẢ: ${total} điểm\nThời gian: ${timeString}\n\n${msg}`);
+            
+            saveHistory(total, answers);
+            const fd = new FormData();
+            fd.append("TenHocSinh", userData.name); fd.append("Lop", userData.class);
+            fd.append("Diem", total); fd.append("ThoiGian", timeString);
+            fetch(SHEET, {method:'POST', body:fd});
+        }
+
+        function saveHistory(score, userAnswers) {
+            let history = JSON.parse(localStorage.getItem('his_'+user.uid) || "[]");
+            history.push({ date: new Date().toLocaleString(), score: score, answers: JSON.parse(JSON.stringify(userAnswers)) });
+            localStorage.setItem('his_'+user.uid, JSON.stringify(history));
+            loadHistory();
+        }
+        function loadHistory() {
+            let history = JSON.parse(localStorage.getItem('his_'+user.uid) || "[]");
+            const list = document.getElementById('history-list');
+            if(history.length === 0) return;
+            let html = '';
+            history.slice().reverse().forEach((h, idx) => {
+                let realIdx = history.length - 1 - idx;
+                let cls = h.score < 5 ? 's-low' : (h.score < 8 ? 's-mid' : 's-high');
+                html += `<div class="history-item"><div><span>📅 ${h.date}</span></div><div><span class="score-badge ${cls}" style="margin-right:10px">${h.score}đ</span><button class="nav-btn" style="padding:5px 10px; font-size:0.8rem" onclick="reviewExam(${realIdx})">Xem lại</button></div></div>`;
+            });
+            list.innerHTML = html;
+        }
+        
+        function reviewExam(index) {
+            let history = JSON.parse(localStorage.getItem('his_'+user.uid) || "[]");
+            let item = history[index];
+            if(!item) return;
+            isReviewMode = true; answers = item.answers || {};
+            QUESTIONS = [...MASTER_DATA]; 
+            document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+            document.getElementById('sec-quiz').classList.add('active');
+            document.getElementById('sec-quiz').style.display='flex';
+            document.getElementById('footer-nav').style.display='flex';
+            document.getElementById('exam-status').innerText = "ĐANG XEM LẠI (Điểm: " + item.score + ")";
+            document.getElementById('exam-status').style.color = "blue";
+            document.getElementById('timer-box').innerText = "--:--:--"; 
+            document.getElementById('submit-btn').style.display = "none";
+            currentQ = 0; renderQ();
+        }
+
+        function toggleChat(){const b=document.getElementById('chat-box');b.style.display=b.style.display==='flex'?'none':'flex'}
+        
+        // --- CENTRALIZED GEMINI CALL ---
+        async function callGemini(text) {
+            // Sử dụng model mới nhất
+            const model = "gemini-2.5-flash-preview-09-2025"; 
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            const body = {
+                contents: [{ parts: [{ text: text }] }]
+            };
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            const data = await response.json();
+            return data.candidates[0].content.parts[0].text;
+        }
+
+        async function sendChat(){
+            const i=document.getElementById('chat-inp'), t=i.value.trim(); 
+            if(!t)return; 
+            const b=document.getElementById('chat-msgs'); 
+            b.innerHTML+=`<div class="msg user">${t}</div>`; 
+            i.value=''; b.scrollTop=b.scrollHeight; 
+            
+            // FEATURE AI 3: Chat with context
+            const contextPrompt = `Bạn là một gia sư toán học thân thiện tên là Mathpro AI. Hãy trả lời câu hỏi sau của học sinh một cách ngắn gọn, súc tích và dễ hiểu: "${t}"`;
+            
+            try{
+                b.innerHTML += `<div class="msg bot"><span class="ai-loading"></span></div>`;
+                const text = await callGemini(contextPrompt);
+                b.lastChild.innerHTML = text; // Replace loading spinner
+                b.scrollTop=b.scrollHeight;
+            }catch(e){
+                b.lastChild.innerHTML = "Lỗi kết nối AI.";
+            }
+        }
+
+        window.onload=()=>{
+            // START MOCK INIT
+            // Try to restore session
+            const stored = localStorage.getItem('isLoggedIn');
+            if(stored) {
+                user = { uid: 'demo_user_123', email: 'hocsinh@mathpro.edu.vn' };
+                document.getElementById('p-email').innerText = user.email;
+                checkUserInfo(user);
+                initLectures(); initInfographics();
+            } else {
+                document.getElementById('auth-overlay').style.display='flex';
+                document.getElementById('main-app').style.display='none';
+                document.getElementById('info-modal').style.display='none';
+            }
+        };
+    </script>
+</body>
+</html>
