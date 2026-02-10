@@ -3,47 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gia Sư Toán AI (Math Tutor)</title>
-    
+    <title>Cô Giáo Toán AI</title>
     <script type="text/javascript" async
       src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML">
     </script>
-    
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f0f2f5; }
-        h1 { color: #1a73e8; text-align: center; }
-        .chat-container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
-        input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
-        button { padding: 12px 24px; cursor: pointer; background: #1a73e8; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; transition: background 0.3s; }
-        button:hover { background: #1557b0; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        
-        #response { 
-            margin-top: 20px; 
-            padding: 20px; 
-            background: #f8f9fa; 
-            border-left: 4px solid #1a73e8; 
-            border-radius: 4px; 
-            min-height: 100px; 
-            line-height: 1.6;
-            font-size: 16px;
-        }
-        .error { color: red; border-left-color: red !important; background: #fff0f0 !important; }
+        body { font-family: 'Segoe UI', sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; background: #fff0f5; /* Màu hồng nhạt nữ tính */ }
+        .box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 2px solid #ffb6c1; }
+        h2 { text-align: center; color: #d63384; }
+        input { width: 70%; padding: 12px; border: 2px solid #ffc0cb; border-radius: 8px; outline: none; }
+        input:focus { border-color: #d63384; }
+        button { padding: 12px 24px; background: #d63384; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #c2185b; }
+        #response { margin-top: 20px; padding: 15px; background: #fffcfd; border-radius: 8px; min-height: 50px; line-height: 1.6; border: 1px dashed #ffb6c1; }
+        .error { color: #721c24; background-color: #f8d7da; padding: 10px; border-radius: 5px; }
     </style>
 </head>
 <body>
 
-    <div class="chat-container">
-        <h1>🎓 Gia Sư Toán AI</h1>
-        <p style="text-align: center; color: #666;">Nhập bài toán của em vào bên dưới, thầy sẽ hướng dẫn giải chi tiết!</p>
-        
-        <div class="input-group">
-            <input type="text" id="userInput" placeholder="Ví dụ: Giải phương trình x^2 - 4x + 3 = 0" onkeypress="handleEnter(event)">
-            <button onclick="askAI()" id="btnSubmit">Hỏi Thầy</button>
+    <div class="box">
+        <h2>👩‍🏫 Cô Giáo Toán AI</h2>
+        <div style="text-align: center; margin-bottom: 20px;">
+            <input type="text" id="userInput" placeholder="Em chào Cô ạ, Cô giúp em bài này với...">
+            <button onclick="askAI()" id="btnKey">Gửi Cô</button>
         </div>
-
-        <div id="response">Câu trả lời sẽ hiện ở đây...</div>
+        <div id="response">Cô đang đợi câu hỏi của em...</div>
     </div>
 
     <script type="importmap">
@@ -57,75 +41,60 @@
     <script type="module">
       import { GoogleGenerativeAI } from "@google/generative-ai";
 
-      // --- ĐÃ DÁN API KEY CỦA BẠN VÀO ĐÂY ---
-      const API_KEY = "AIzaSyDLzIoH_R01baSdPCvV2mCJLSRCTbFdPB0"; 
-      // ---------------------------------------
-
+      // Key của bạn (Giữ nguyên)
+      const API_KEY = "AIzaSyDc-L7Em007MZHfkK3zkRWebyzlYtHdKZw";
       const genAI = new GoogleGenerativeAI(API_KEY);
-      
-      // Cấu hình tính cách cho Bot
-      const systemInstruction = `
-        Bạn là một gia sư Toán học chuyên nghiệp, thân thiện và kiên nhẫn.
-        Nhiệm vụ: Hướng dẫn học sinh giải quyết các bài toán từ lớp 1 đến lớp 12.
+
+      // 🔴 NỘI DUNG BẠN VỪA GỬI ĐÃ ĐƯỢC DÁN VÀO ĐÂY 🔴
+      const CAU_LENH_CHO_BOT = `
+        Bạn là gia sư Toán phổ thông, một trợ lý AI có tên là "Gia sư Toán". Bạn đóng vai trò là giáo viên giảng dạy môn toán THPT (Cấp 3).
         
-        QUY TẮC QUAN TRỌNG:
-        1. KHÔNG đưa ra đáp án cuối cùng ngay lập tức. Hãy gợi ý từng bước (Step-by-step).
-        2. Luôn trình bày công thức Toán học trong dấu $$ để hiển thị đẹp (Ví dụ: $$x^2$$).
-        3. Nếu bài toán có nhiều cách giải, hãy chọn cách dễ hiểu nhất cho học sinh.
-        4. Luôn động viên học sinh sau khi giải xong.
-      `;
+        NGUYÊN TẮC BẮT BUỘC:
+        1. Phạm vi: Chỉ trả lời kiến thức Toán THPT. Nếu hỏi ngoài lề hoặc chưa biết, hãy nói: "Xin lỗi em, phần này thầy chưa nghiên cứu, chờ thầy nghiên cứu giáo trình nhé".
+        2. Xưng hô: Bạn xưng là "Cô", gọi người dùng là "Em". Nếu học sinh nói trống không hoặc bất lịch sự, hãy nhắc nhở hoặc từ chối trả lời.
+        3. Mở đầu: Luôn bắt đầu bằng: "Cô chào em. Cô là Gia sư Toán. Em muốn học kiến thức mới hay ôn tập kiến thức gì nào?"
+        4. Phong cách: Giải thích rõ ràng, dễ hiểu. Dùng ví dụ minh họa.
+        5. Định dạng: 
+           - Công thức Toán MẮT BUỘC phải viết trong dấu $$ (Ví dụ: $$x^2$$) để hiển thị đẹp.
+           - Có thể tạo bài trắc nghiệm (MC), Đúng/Sai (MCA) hoặc điền khuyết (SA).
+        6. Tương tác: Luôn động viên, khen ngợi khi học sinh làm đúng.
+      `; 
 
       window.askAI = async function() {
-        const inputField = document.getElementById("userInput");
-        const button = document.getElementById("btnSubmit");
-        const output = document.getElementById("response");
-        
-        const question = inputField.value.trim();
-        if (!question) {
-            alert("Em chưa nhập câu hỏi nào cả!");
-            return;
-        }
+        const out = document.getElementById("response");
+        const btn = document.getElementById("btnKey");
+        const prompt = document.getElementById("userInput").value;
 
-        // Khóa nút bấm để tránh bấm nhiều lần
-        button.disabled = true;
-        button.innerText = "Đang suy nghĩ...";
-        output.className = ""; // Reset lỗi cũ
-        output.innerHTML = "⏳ Thầy đang đọc đề và giải, em đợi xíu nhé...";
+        if(!prompt) return alert("Em chưa nhập câu hỏi nào cả!");
+
+        btn.innerText = "Đang xem...";
+        btn.disabled = true;
+        out.innerHTML = "⏳ Cô đang đọc đề bài...";
+        out.className = "";
 
         try {
-            // Chọn model Gemini 1.5 Flash (Nhanh và miễn phí)
             const model = genAI.getGenerativeModel({ 
                 model: "gemini-1.5-flash",
-                systemInstruction: systemInstruction
+                systemInstruction: CAU_LENH_CHO_BOT 
             });
-            
-            const result = await model.generateContent(question);
+
+            const result = await model.generateContent(prompt);
             const response = await result.response;
             const text = response.text();
 
-            // Xử lý xuống dòng và hiển thị
-            output.innerHTML = text
-                .replace(/\*\*(.*?)\*\*/g, "<b>$1</b>") // In đậm
-                .replace(/\n/g, "<br>"); // Xuống dòng
-
-            // Yêu cầu MathJax vẽ lại công thức Toán
-            if (window.MathJax) {
-                MathJax.Hub.Queue(["Typeset", MathJax.Hub, "response"]);
-            }
+            // Xử lý hiển thị
+            out.innerHTML = text.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>").replace(/\n/g, "<br>");
             
-        } catch (error) {
-            output.className = "error";
-            output.innerHTML = "🔴 <b>CÓ LỖI XẢY RA:</b><br>" + error.message + "<br><br><i>(Hãy kiểm tra lại kết nối mạng hoặc thử lại sau vài phút)</i>";
-            console.error(error);
-        } finally {
-            button.disabled = false;
-            button.innerText = "Hỏi Thầy";
-        }
-      }
+            // Vẽ lại công thức Toán
+            if(window.MathJax) MathJax.Hub.Queue(["Typeset", MathJax.Hub, "response"]);
 
-      // Cho phép ấn Enter để gửi
-      window.handleEnter = function(e) {
-          if(e.key === 'Enter') askAI();
+        } catch (error) {
+            out.className = "error";
+            out.innerHTML = "🔴 LỖI: " + error.message;
+        } finally {
+            btn.innerText = "Gửi Cô";
+            btn.disabled = false;
+        }
       }
     </script>
 </body>
