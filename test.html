@@ -8,45 +8,34 @@
       src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML">
     </script>
     <style>
-        body { font-family: sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; background: #f4f4f9; }
+        body { font-family: sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; background: #f0f2f5; }
         .box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #2c3e50; }
-        input { width: 70%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
-        button { padding: 12px 24px; background: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
-        button:hover { background: #2980b9; }
-        #response { margin-top: 20px; padding: 20px; background: #ecf0f1; border-radius: 8px; min-height: 100px; line-height: 1.6; font-size: 16px; color: #2c3e50; }
-        .error { color: #c0392b; background: #fadbd8; border: 1px solid #e74c3c; }
+        h2 { text-align: center; color: #1a73e8; }
+        input { width: 70%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; }
+        button { padding: 12px 24px; background: #1a73e8; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        button:disabled { background: #ccc; }
+        #response { margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px; min-height: 50px; }
+        .error { color: red; background: #fff0f0; }
     </style>
 </head>
 <body>
-
     <div class="box">
-        <h2>🤖 Gia Sư Toán AI</h2>
-        <p style="text-align: center;">Nhập đề bài vào bên dưới, thầy sẽ hướng dẫn giải chi tiết!</p>
-        
+        <h2>🤖 Gia Sư Toán (Bản Ổn Định)</h2>
         <div style="display: flex; gap: 10px; justify-content: center;">
-            <input type="text" id="userInput" placeholder="Ví dụ: Giải phương trình x^2 - 4x + 3 = 0">
-            <button onclick="askAI()" id="btnKey">Hỏi Thầy</button>
+            <input type="text" id="userInput" placeholder="Nhập bài toán (Ví dụ: Giải pt x^2 - 4x + 3 = 0)">
+            <button onclick="askAI()" id="btnKey">Gửi Thầy</button>
         </div>
-
-        <div id="response">Câu trả lời sẽ hiện ở đây...</div>
+        <div id="response">Sẵn sàng...</div>
     </div>
 
     <script type="importmap">
-      {
-        "imports": {
-          "@google/generative-ai": "https://esm.run/@google/generative-ai"
-        }
-      }
+      { "imports": { "@google/generative-ai": "https://esm.run/@google/generative-ai" } }
     </script>
-
     <script type="module">
       import { GoogleGenerativeAI } from "@google/generative-ai";
 
-      // --- CHÌA KHÓA MỚI CỦA BẠN ĐÃ ĐƯỢC DÁN TẠI ĐÂY ---
-      const API_KEY = "AIzaSyDc-L7Em007MZHfkK3zkRWebyzlYtHdKZw";
-      // ---------------------------------------------
-
+      // Key của bạn
+      const API_KEY = "AIzaSyDc-L7Em007MZHfkK3zkRWebyzlYtHdKZw"; 
       const genAI = new GoogleGenerativeAI(API_KEY);
 
       window.askAI = async function() {
@@ -54,38 +43,29 @@
         const btn = document.getElementById("btnKey");
         const prompt = document.getElementById("userInput").value;
 
-        if(!prompt) return alert("Em chưa nhập câu hỏi nào cả!");
-
-        // Hiệu ứng đang tải
+        if(!prompt) return alert("Bạn chưa nhập câu hỏi!");
+        
         btn.innerText = "Đang giải...";
         btn.disabled = true;
-        out.innerHTML = "⏳ Thầy đang suy nghĩ, em đợi chút nhé...";
-        out.className = ""; // Xóa lỗi cũ nếu có
+        out.innerHTML = "⏳ Thầy đang suy nghĩ...";
+        out.className = "";
 
         try {
-            // Sử dụng model Flash (Nhanh và Chuẩn)
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            // QUAN TRỌNG: Đổi sang model 'gemini-pro' (Bản này tương thích 100% mọi tài khoản)
+            const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-            const fullQuery = "Bạn là gia sư toán thân thiện. Hãy giải bài toán này từng bước một cách dễ hiểu nhất. Sử dụng LaTeX cho các công thức toán (đặt trong dấu $$). Đề bài: " + prompt;
-
-            const result = await model.generateContent(fullQuery);
+            const result = await model.generateContent("Bạn là gia sư toán. Giải bài này chi tiết, dùng LaTeX trong dấu $$: " + prompt);
             const response = await result.response;
             const text = response.text();
 
-            // Xử lý hiển thị
-            out.innerHTML = text
-                .replace(/\*\*(.*?)\*\*/g, "<b>$1</b>") // In đậm
-                .replace(/\n/g, "<br>"); // Xuống dòng
-
-            // Vẽ lại công thức Toán
+            out.innerHTML = text.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>").replace(/\n/g, "<br>");
             if(window.MathJax) MathJax.Hub.Queue(["Typeset", MathJax.Hub, "response"]);
 
         } catch (error) {
-            out.className = "error"; // Hiện màu đỏ báo lỗi
-            out.innerHTML = "🔴 <b>LỖI KẾT NỐI:</b> " + error.message + "<br><br> (Nếu vẫn lỗi, bạn hãy thử tải lại trang hoặc kiểm tra mạng nhé)";
-            console.error(error);
+            out.className = "error";
+            out.innerHTML = "🔴 LỖI: " + error.message;
         } finally {
-            btn.innerText = "Hỏi Thầy";
+            btn.innerText = "Gửi Thầy";
             btn.disabled = false;
         }
       }
