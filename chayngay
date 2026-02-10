@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cô Giáo Toán AI</title>
+    <script type="text/javascript" async
+      src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; background: #fff0f5; /* Màu hồng nhạt nữ tính */ }
+        .box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 2px solid #ffb6c1; }
+        h2 { text-align: center; color: #d63384; }
+        input { width: 70%; padding: 12px; border: 2px solid #ffc0cb; border-radius: 8px; outline: none; }
+        input:focus { border-color: #d63384; }
+        button { padding: 12px 24px; background: #d63384; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #c2185b; }
+        #response { margin-top: 20px; padding: 15px; background: #fffcfd; border-radius: 8px; min-height: 50px; line-height: 1.6; border: 1px dashed #ffb6c1; }
+        .error { color: #721c24; background-color: #f8d7da; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="box">
+        <h2>👩‍🏫 Cô Giáo Toán AI</h2>
+        <div style="text-align: center; margin-bottom: 20px;">
+            <input type="text" id="userInput" placeholder="Em chào Cô ạ, Cô giúp em bài này với...">
+            <button onclick="askAI()" id="btnKey">Gửi Cô</button>
+        </div>
+        <div id="response">Cô đang đợi câu hỏi của em...</div>
+    </div>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "@google/generative-ai": "https://esm.run/@google/generative-ai"
+        }
+      }
+    </script>
+
+    <script type="module">
+      import { GoogleGenerativeAI } from "@google/generative-ai";
+
+      // Key của bạn (Giữ nguyên)
+      const API_KEY = "AIzaSyDc-L7Em007MZHfkK3zkRWebyzlYtHdKZw";
+      const genAI = new GoogleGenerativeAI(API_KEY);
+
+      // 🔴 NỘI DUNG BẠN VỪA GỬI ĐÃ ĐƯỢC DÁN VÀO ĐÂY 🔴
+      const CAU_LENH_CHO_BOT = `
+        Bạn là gia sư Toán phổ thông, một trợ lý AI có tên là "Gia sư Toán". Bạn đóng vai trò là giáo viên giảng dạy môn toán THPT (Cấp 3).
+        
+        NGUYÊN TẮC BẮT BUỘC:
+        1. Phạm vi: Chỉ trả lời kiến thức Toán THPT. Nếu hỏi ngoài lề hoặc chưa biết, hãy nói: "Xin lỗi em, phần này thầy chưa nghiên cứu, chờ thầy nghiên cứu giáo trình nhé".
+        2. Xưng hô: Bạn xưng là "Cô", gọi người dùng là "Em". Nếu học sinh nói trống không hoặc bất lịch sự, hãy nhắc nhở hoặc từ chối trả lời.
+        3. Mở đầu: Luôn bắt đầu bằng: "Cô chào em. Cô là Gia sư Toán. Em muốn học kiến thức mới hay ôn tập kiến thức gì nào?"
+        4. Phong cách: Giải thích rõ ràng, dễ hiểu. Dùng ví dụ minh họa.
+        5. Định dạng: 
+           - Công thức Toán MẮT BUỘC phải viết trong dấu $$ (Ví dụ: $$x^2$$) để hiển thị đẹp.
+           - Có thể tạo bài trắc nghiệm (MC), Đúng/Sai (MCA) hoặc điền khuyết (SA).
+        6. Tương tác: Luôn động viên, khen ngợi khi học sinh làm đúng.
+      `; 
+
+      window.askAI = async function() {
+        const out = document.getElementById("response");
+        const btn = document.getElementById("btnKey");
+        const prompt = document.getElementById("userInput").value;
+
+        if(!prompt) return alert("Em chưa nhập câu hỏi nào cả!");
+
+        btn.innerText = "Đang xem...";
+        btn.disabled = true;
+        out.innerHTML = "⏳ Cô đang đọc đề bài...";
+        out.className = "";
+
+        try {
+            const model = genAI.getGenerativeModel({ 
+                model: "gemini-1.5-flash",
+                systemInstruction: CAU_LENH_CHO_BOT 
+            });
+
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            const text = response.text();
+
+            // Xử lý hiển thị
+            out.innerHTML = text.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>").replace(/\n/g, "<br>");
+            
+            // Vẽ lại công thức Toán
+            if(window.MathJax) MathJax.Hub.Queue(["Typeset", MathJax.Hub, "response"]);
+
+        } catch (error) {
+            out.className = "error";
+            out.innerHTML = "🔴 LỖI: " + error.message;
+        } finally {
+            btn.innerText = "Gửi Cô";
+            btn.disabled = false;
+        }
+      }
+    </script>
+</body>
+</html>
